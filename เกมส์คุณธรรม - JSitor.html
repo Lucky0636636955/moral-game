@@ -1,0 +1,560 @@
+<!doctype html><html><head></head><body><!DOCTYPE html>
+<html lang="th">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>เกมการ์ดคุณธรรม 8 ประการ</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap"
+		rel="stylesheet">
+	<style>
+		body {
+			font-family: 'IBM Plex Sans Thai', sans-serif;
+			touch-action: manipulation;
+			/* Disable double-tap to zoom on mobile */
+		}
+
+		.board-grid {
+			display: grid;
+			grid-template-columns: repeat(10, 1fr);
+			grid-template-rows: repeat(10, 1fr);
+			width: 90vmin;
+			height: 90vmin;
+			max-width: 800px;
+			max-height: 800px;
+		}
+
+		.space {
+			border: 1px solid #d1d5db;
+			position: relative;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 1.5rem;
+		}
+
+		.player-token {
+			position: absolute;
+			width: 40%;
+			height: 40%;
+			border-radius: 50%;
+			transition: all 0.3s ease-in-out;
+			border: 2px solid white;
+			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+		}
+
+		.card {
+			transition: all 0.3s;
+			transform-style: preserve-3d;
+		}
+
+		.card.is-flipped {
+			transform: rotateY(180deg);
+		}
+
+		.card-face {
+			backface-visibility: hidden;
+			-webkit-backface-visibility: hidden;
+		}
+
+		.card-back {
+			transform: rotateY(180deg);
+		}
+
+		.dice {
+			font-size: 3rem;
+			width: 80px;
+			height: 80px;
+			perspective: 1000px;
+		}
+
+		.dice-cube {
+			width: 100%;
+			height: 100%;
+			position: relative;
+			transform-style: preserve-3d;
+			transition: transform 1s;
+		}
+
+		.dice-face {
+			position: absolute;
+			width: 80px;
+			height: 80px;
+			border: 2px solid #333;
+			border-radius: 8px;
+			background-color: white;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			font-size: 2.5rem;
+			font-weight: bold;
+		}
+
+		.face-1 {
+			transform: rotateY(0deg) translateZ(40px);
+		}
+
+		.face-2 {
+			transform: rotateY(90deg) translateZ(40px);
+		}
+
+		.face-3 {
+			transform: rotateY(180deg) translateZ(40px);
+		}
+
+		.face-4 {
+			transform: rotateY(-90deg) translateZ(40px);
+		}
+
+		.face-5 {
+			transform: rotateX(90deg) translateZ(40px);
+		}
+
+		.face-6 {
+			transform: rotateX(-90deg) translateZ(40px);
+		}
+	</style>
+</head>
+
+<body class="bg-amber-50 text-gray-800 flex items-center justify-center min-h-screen p-2">
+
+	<!-- Setup Screen -->
+	<div id="setup-screen" class="text-center bg-white p-8 rounded-2xl shadow-lg">
+		<h1 class="text-4xl font-bold text-amber-600 mb-2">เกมการ์ดคุณธรรม 8 ประการ</h1>
+		<p class="text-lg text-gray-600 mb-6">เลือกจำนวนผู้เล่นเพื่อเริ่มต้นภารกิจ!</p>
+		<div class="flex justify-center gap-4">
+			<button onclick="startGame(2)" class="px-6 py-3 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 transition text-xl">2 คน</button>
+			<button onclick="startGame(3)" class="px-6 py-3 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition text-xl">3 คน</button>
+			<button onclick="startGame(4)" class="px-6 py-3 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-600 transition text-xl">4 คน</button>
+		</div>
+	</div>
+
+	<!-- Main Game Screen -->
+	<div id="game-screen" class="hidden w-full max-w-7xl mx-auto">
+		<div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+
+			<!-- Player Info & Controls -->
+			<div
+				class="lg:col-span-1 order-2 lg:order-1 bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-md flex flex-col justify-between">
+				<div>
+					<h2 class="text-2xl font-bold text-center mb-4 border-b-2 pb-2">ผู้เล่น</h2>
+					<div id="players-info" class="space-y-4">
+						<!-- Player info will be injected here -->
+					</div>
+				</div>
+				<div id="controls" class="mt-6 text-center">
+					<p id="turn-indicator" class="text-xl font-semibold mb-4"></p>
+					<div class="flex justify-center mb-4">
+						<div class="dice">
+							<div class="dice-cube" id="dice-cube">
+								<div class="dice-face face-1">1</div>
+								<div class="dice-face face-2">2</div>
+								<div class="dice-face face-3">3</div>
+								<div class="dice-face face-4">4</div>
+								<div class="dice-face face-5">5</div>
+								<div class="dice-face face-6">6</div>
+							</div>
+						</div>
+					</div>
+					<button id="roll-dice-btn" class="w-full bg-amber-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-amber-600 transition-transform transform hover:scale-105 text-xl">
+                        ทอยลูกเต๋า
+                    </button>
+				</div>
+			</div>
+
+			<!-- Game Board -->
+			<div class="lg:col-span-3 order-1 lg:order-2 flex justify-center items-center">
+				<div class="relative board-grid bg-white rounded-2xl shadow-inner p-2">
+					<!-- Board spaces will be generated here -->
+					<div id="board-center"
+						class="absolute inset-1/4 flex flex-col justify-center items-center bg-amber-100 rounded-full p-4 text-center">
+						<h2 class="text-2xl md:text-4xl font-bold text-amber-700">ภารกิจพิชิตคุณธรรม</h2>
+						<p class="text-sm md:text-base text-amber-600 mt-2">สะสมการ์ดให้ครบ 8 ใบเพื่อเป็นผู้ชนะ!</p>
+					</div>
+				</div>
+			</div>
+
+		</div>
+	</div>
+
+	<!-- Modal -->
+	<div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+		<div id="modal-content"
+			class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center transform scale-95 transition-transform">
+			<!-- Modal content will be injected here -->
+		</div>
+	</div>
+
+
+	<script>
+		// --- GAME DATA ---
+    const VIRTUES = {
+        'ซื่อสัตย์': { name: 'ความซื่อสัตย์', desc: 'พูดจริง ทำจริง ไม่โกง', icon: '⚖️', color: 'bg-blue-200' },
+        'รับผิดชอบ': { name: 'ความรับผิดชอบ', desc: 'ทำหน้าที่ของตนให้สำเร็จ', icon: '📅', color: 'bg-green-200' },
+        'กตัญญู': { name: 'ความกตัญญู', desc: 'ระลึกและตอบแทนบุญคุณ', icon: '🙏', color: 'bg-yellow-200' },
+        'พอเพียง': { name: 'ความพอเพียง', desc: 'รู้จักพอดี ไม่ฟุ่มเฟือย', icon: '🌱', color: 'bg-lime-200' },
+        'ขยัน': { name: 'ความขยัน', desc: 'ตั้งใจทำงาน ไม่เกียจคร้าน', icon: '💪', color: 'bg-orange-200' },
+        'สามัคคี': { name: 'ความสามัคคี', desc: 'ช่วยเหลือ ร่วมมือกัน', icon: '🤝', color: 'bg-cyan-200' },
+        'วินัย': { name: 'การมีวินัย', desc: 'เคารพกฎ ระเบียบ', icon: '🚦', color: 'bg-purple-200' },
+        'จิตสาธารณะ': { name: 'จิตสาธารณะ', desc: 'ช่วยเหลือเพื่อส่วนรวม', icon: '❤️', color: 'bg-pink-200' }
+    };
+    const VIRTUE_KEYS = Object.keys(VIRTUES);
+
+    const SITUATIONS = [
+        { q: 'คุณเก็บเงินได้ที่สนามเด็กเล่น จะทำอย่างไร?', a: 'ซื่อสัตย์' },
+        { q: 'คุณครูสั่งการบ้าน คุณจะทำอย่างไร?', a: 'รับผิดชอบ' },
+        { q: 'คุณพ่อคุณแม่ทำงานกลับมาเหนื่อยๆ คุณจะช่วยอะไรท่านได้บ้าง?', a: 'กตัญญู' },
+        { q: 'เพื่อนมีของเล่นใหม่ราคาแพงมาก คุณรู้สึกอย่างไร?', a: 'พอเพียง' },
+        { q: 'ถึงเวลาอ่านหนังสือ แต่ก็อยากดูการ์ตูน คุณจะทำอะไรก่อน?', a: 'ขยัน' },
+        { q: 'เพื่อนในกลุ่มทำงานไม่เสร็จ คุณจะทำอย่างไร?', a: 'สามัคคี' },
+        { q: 'เห็นไฟแดงตรงทางม้าลาย คุณจะข้ามถนนหรือไม่?', a: 'วินัย' },
+        { q: 'เพื่อนทำดินสอตก คุณจะทำอย่างไร?', a: 'จิตสาธารณะ' },
+        { q: 'คุณทำแก้วน้ำของโรงเรียนแตกโดยไม่มีใครเห็น จะทำอย่างไร?', a: 'ซื่อสัตย์' },
+        { q: 'ห้องเรียนรกมาก คุณและเพื่อนๆ ควรทำอย่างไร?', a: 'สามัคคี' },
+        { q: 'คุณเห็นขยะตกอยู่บนพื้นทางเดิน จะทำอย่างไร?', a: 'จิตสาธารณะ' },
+        { q: 'ถึงเวลาเข้านอนแล้ว แต่คุณยังเล่นเกมไม่จบ จะทำอย่างไร?', a: 'วินัย' },
+    ];
+
+    const BOARD_SPACES = 36;
+    let boardLayout = [];
+
+    // --- GAME STATE ---
+    let players = [];
+    let currentPlayerIndex = 0;
+    let isMoving = false;
+
+    // --- DOM ELEMENTS ---
+    const setupScreen = document.getElementById('setup-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const boardGrid = document.querySelector('.board-grid');
+    const playersInfoDiv = document.getElementById('players-info');
+    const turnIndicator = document.getElementById('turn-indicator');
+    const rollDiceBtn = document.getElementById('roll-dice-btn');
+    const diceCube = document.getElementById('dice-cube');
+    const modal = document.getElementById('modal');
+    const modalContent = document.getElementById('modal-content');
+
+    // --- FUNCTIONS ---
+
+    function generateBoardLayout() {
+        boardLayout = [{ type: 'start', text: '🏁' }];
+        const virtueSpaces = VIRTUE_KEYS.slice();
+        const situationSpaces = Array(12).fill({ type: 'situation', text: '❓' });
+        
+        let otherSpaces = [];
+        for (let i = 0; i < BOARD_SPACES - 1; i++) {
+            if (i % 4 === 1 && virtueSpaces.length > 0) {
+                const virtue = virtueSpaces.pop();
+                otherSpaces.push({ type: 'virtue', virtue: virtue, text: VIRTUES[virtue].icon });
+            } else if (i % 4 === 3) {
+                otherSpaces.push({ type: 'situation', text: '❓' });
+            } else {
+                 otherSpaces.push({ type: 'empty' });
+            }
+        }
+        
+        // Shuffle otherSpaces for variety
+        for (let i = otherSpaces.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [otherSpaces[i], otherSpaces[j]] = [otherSpaces[j], otherSpaces[i]];
+        }
+        
+        boardLayout = [...boardLayout, ...otherSpaces.slice(0, BOARD_SPACES - 1)];
+    }
+
+    function createBoard() {
+        boardGrid.innerHTML = ''; // Clear existing board
+        const centerDiv = document.createElement('div');
+        centerDiv.id = 'board-center';
+        centerDiv.className = 'absolute inset-1/4 flex flex-col justify-center items-center bg-amber-100 rounded-full p-4 text-center';
+        centerDiv.innerHTML = `<h2 class="text-xl md:text-3xl font-bold text-amber-700">ภารกิจพิชิตคุณธรรม</h2><p class="text-xs md:text-base text-amber-600 mt-2">สะสมการ์ดให้ครบ 8 ใบ!</p>`;
+        
+        const pathCoords = getPathCoordinates(10, 10);
+        
+        boardLayout.forEach((spaceData, i) => {
+            const space = document.createElement('div');
+            const coord = pathCoords[i];
+            space.style.gridRowStart = coord.y + 1;
+            space.style.gridColumnStart = coord.x + 1;
+            space.className = 'space';
+            space.id = `space-${i}`;
+
+            if (spaceData.type === 'virtue') {
+                space.classList.add(VIRTUES[spaceData.virtue].color);
+                space.innerHTML = `<span title="${VIRTUES[spaceData.virtue].name}">${spaceData.text}</span>`;
+            } else if (spaceData.type === 'start') {
+                space.classList.add('bg-green-500', 'text-white');
+                space.innerHTML = `<span>${spaceData.text}</span>`;
+            } else if (spaceData.type === 'situation') {
+                 space.classList.add('bg-indigo-300', 'text-white');
+                 space.innerHTML = `<span>${spaceData.text}</span>`;
+            }
+            boardGrid.appendChild(space);
+        });
+        boardGrid.appendChild(centerDiv);
+    }
+    
+    function getPathCoordinates(width, height) {
+        const coords = [];
+        // Top row
+        for (let i = 0; i < width -1; i++) coords.push({ x: i, y: 0 });
+        // Right col
+        for (let i = 0; i < height -1; i++) coords.push({ x: width - 1, y: i });
+        // Bottom row
+        for (let i = width - 1; i > 0; i--) coords.push({ x: i, y: height - 1 });
+        // Left col
+        for (let i = height - 1; i > 0; i--) coords.push({ x: 0, y: i });
+        return coords;
+    }
+
+    function startGame(numPlayers) {
+        players = [];
+        const colors = ['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500'];
+        const offsets = [{top: '10%', left: '10%'}, {top: '10%', left: '50%'}, {top: '50%', left: '10%'}, {top: '50%', left: '50%'}];
+
+        for (let i = 0; i < numPlayers; i++) {
+            players.push({
+                id: i,
+                name: `ผู้เล่น ${i + 1}`,
+                color: colors[i],
+                position: 0,
+                cards: new Set(),
+                token: null
+            });
+        }
+
+        generateBoardLayout();
+        createBoard();
+
+        players.forEach((player, i) => {
+            const token = document.createElement('div');
+            token.className = `player-token ${player.color}`;
+            token.style.top = offsets[i].top;
+            token.style.left = offsets[i].left;
+            document.getElementById('space-0').appendChild(token);
+            player.token = token;
+        });
+
+        setupScreen.classList.add('hidden');
+        gameScreen.classList.remove('hidden');
+        updatePlayersUI();
+        startTurn();
+    }
+
+    function updatePlayersUI() {
+        playersInfoDiv.innerHTML = '';
+        players.forEach(player => {
+            const playerDiv = document.createElement('div');
+            playerDiv.id = `player-info-${player.id}`;
+            playerDiv.className = 'p-3 rounded-lg border-2';
+            
+            let cardsHtml = `<div class="grid grid-cols-4 gap-1 mt-2">`;
+            VIRTUE_KEYS.forEach(key => {
+                if (player.cards.has(key)) {
+                    cardsHtml += `<div class="w-8 h-8 ${VIRTUES[key].color} rounded-md flex items-center justify-center text-lg" title="${VIRTUES[key].name}">${VIRTUES[key].icon}</div>`;
+                } else {
+                    cardsHtml += `<div class="w-8 h-8 bg-gray-200 rounded-md flex items-center justify-center text-gray-400">?</div>`;
+                }
+            });
+            cardsHtml += `</div>`;
+
+            playerDiv.innerHTML = `
+                <div class="flex items-center">
+                    <div class="w-6 h-6 rounded-full ${player.color} mr-3"></div>
+                    <span class="font-bold text-lg">${player.name}</span>
+                </div>
+                ${cardsHtml}
+            `;
+            playersInfoDiv.appendChild(playerDiv);
+        });
+        highlightCurrentPlayer();
+    }
+
+    function highlightCurrentPlayer() {
+        document.querySelectorAll('[id^="player-info-"]').forEach(el => {
+            el.classList.remove('border-amber-500', 'shadow-lg');
+            el.classList.add('border-gray-200');
+        });
+        const currentPlayerInfo = document.getElementById(`player-info-${currentPlayerIndex}`);
+        if(currentPlayerInfo) {
+            currentPlayerInfo.classList.add('border-amber-500', 'shadow-lg');
+            currentPlayerInfo.classList.remove('border-gray-200');
+        }
+    }
+
+    function startTurn() {
+        isMoving = false;
+        const currentPlayer = players[currentPlayerIndex];
+        turnIndicator.textContent = `ตาของ ${currentPlayer.name}`;
+        rollDiceBtn.disabled = false;
+        rollDiceBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        rollDiceBtn.classList.add('hover:bg-amber-600');
+        highlightCurrentPlayer();
+    }
+
+    rollDiceBtn.addEventListener('click', () => {
+        if (isMoving) return;
+        isMoving = true;
+        rollDiceBtn.disabled = true;
+        rollDiceBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        rollDiceBtn.classList.remove('hover:bg-amber-600');
+
+        const roll = Math.floor(Math.random() * 6) + 1;
+        
+        // Dice animation
+        const rotations = {
+            1: 'rotateY(0deg)',
+            2: 'rotateY(-90deg)',
+            3: 'rotateY(-180deg)',
+            4: 'rotateY(90deg)',
+            5: 'rotateX(-90deg)',
+            6: 'rotateX(90deg)'
+        };
+        diceCube.style.transform = `rotateX(720deg) rotateY(720deg) ${rotations[roll]}`;
+
+        setTimeout(() => {
+            movePlayer(roll);
+        }, 1200);
+    });
+
+    function movePlayer(steps) {
+        const player = players[currentPlayerIndex];
+        let moveCount = 0;
+
+        function step() {
+            if (moveCount >= steps) {
+                handleLanding();
+                return;
+            }
+            player.position = (player.position + 1) % BOARD_SPACES;
+            const targetSpace = document.getElementById(`space-${player.position}`);
+            targetSpace.appendChild(player.token);
+            moveCount++;
+            setTimeout(step, 300);
+        }
+        step();
+    }
+    
+    function handleLanding() {
+        const player = players[currentPlayerIndex];
+        const landedSpace = boardLayout[player.position];
+        
+        switch (landedSpace.type) {
+            case 'virtue':
+                showModal('virtue', landedSpace.virtue);
+                break;
+            case 'situation':
+                showModal('situation');
+                break;
+            default:
+                setTimeout(nextTurn, 1000);
+        }
+    }
+
+    function awardVirtueCard(virtueKey) {
+        const player = players[currentPlayerIndex];
+        if (!player.cards.has(virtueKey)) {
+            player.cards.add(virtueKey);
+            updatePlayersUI();
+            if (player.cards.size === VIRTUE_KEYS.length) {
+                setTimeout(() => showModal('win', player), 500);
+            }
+        }
+    }
+
+    function nextTurn() {
+        currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+        startTurn();
+    }
+
+    function showModal(type, data) {
+        modal.classList.remove('hidden');
+        setTimeout(() => modalContent.classList.add('scale-100'), 10);
+
+        let content = '';
+        if (type === 'virtue') {
+            const virtue = VIRTUES[data];
+            const player = players[currentPlayerIndex];
+            const alreadyOwned = player.cards.has(data);
+            content = `
+                <div class="text-6xl mb-4">${virtue.icon}</div>
+                <h2 class="text-3xl font-bold mb-2">ช่องคุณธรรม: ${virtue.name}</h2>
+                <p class="text-lg text-gray-600 mb-6">"${virtue.desc}"</p>
+                ${alreadyOwned 
+                    ? `<p class="font-semibold text-orange-500 mb-4">คุณมีการ์ดใบนี้แล้ว</p>`
+                    : `<p class="font-semibold text-green-600 mb-4">คุณได้รับการ์ด ${virtue.name}!</p>`
+                }
+                <button onclick="closeModal(true)" class="px-6 py-2 bg-amber-500 text-white font-semibold rounded-lg shadow-md hover:bg-amber-600 transition">ไปต่อ</button>
+            `;
+            if (!alreadyOwned) {
+                awardVirtueCard(data);
+            }
+        } else if (type === 'situation') {
+            const situation = SITUATIONS[Math.floor(Math.random() * SITUATIONS.length)];
+            content = `
+                <div class="text-6xl mb-4">❓</div>
+                <h2 class="text-3xl font-bold mb-2">การ์ดสถานการณ์</h2>
+                <p class="text-lg text-gray-600 mb-6 p-4 bg-gray-100 rounded-lg">"${situation.q}"</p>
+                <div id="situation-card" class="relative w-full h-40">
+                    <div class="card w-full h-full">
+                        <div class="card-face absolute w-full h-full flex items-center justify-center">
+                            <button onclick="revealSituation('${situation.a}')" class="px-6 py-3 bg-indigo-500 text-white font-bold rounded-lg shadow-md hover:bg-indigo-600 transition text-lg">
+                                ตอบและรับการ์ด
+                            </button>
+                        </div>
+                        <div class="card-face card-back absolute w-full h-full flex flex-col items-center justify-center bg-white rounded-lg p-4 border-2 border-indigo-400">
+                             <p class="text-gray-700">คำตอบที่ถูกต้องคือการแสดง</p>
+                            <div class="flex items-center text-2xl font-bold my-2">
+                                <span class="text-4xl mr-2">${VIRTUES[situation.a].icon}</span>
+                                <span>${VIRTUES[situation.a].name}</span>
+                            </div>
+                            <p class="font-semibold text-green-600">คุณได้รับการ์ดใบนี้!</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (type === 'win') {
+            const winner = data;
+            content = `
+                <div class="text-6xl mb-4">🎉</div>
+                <h2 class="text-4xl font-bold text-amber-600 mb-2">ยินดีด้วย!</h2>
+                <p class="text-2xl text-gray-700 mb-6">${winner.name} คือผู้พิชิตคุณธรรม!</p>
+                <button onclick="resetGame()" class="px-8 py-3 bg-green-500 text-white font-bold rounded-lg shadow-md hover:bg-green-600 transition text-xl">เล่นอีกครั้ง</button>
+            `;
+        }
+        modalContent.innerHTML = content;
+    }
+
+    function revealSituation(virtueKey) {
+        document.querySelector('#situation-card .card').classList.add('is-flipped');
+        awardVirtueCard(virtueKey);
+        setTimeout(() => closeModal(true), 3000);
+    }
+
+    function closeModal(proceedToNextTurn) {
+        modalContent.classList.remove('scale-100');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            if (proceedToNextTurn) {
+                nextTurn();
+            }
+        }, 300);
+    }
+
+    function resetGame() {
+        closeModal(false);
+        gameScreen.classList.add('hidden');
+        setupScreen.classList.remove('hidden');
+        boardGrid.innerHTML = '';
+        players = [];
+        currentPlayerIndex = 0;
+    }
+
+	</script>
+
+</body>
+
+</html></body><html>
